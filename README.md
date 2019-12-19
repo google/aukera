@@ -22,7 +22,7 @@ conflicting with platform-specific maintenance.
 
 ### Stateless Schedule Calculation
 
-Aukera provides a local API for querying for schedules invidually or
+Aukera provides a local API for querying for schedules individually or
 holistically. Schedule calculation happens when requested, making it possible
 for configuration changes to be reflected in the JSON response immediately
 afterward.
