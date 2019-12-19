@@ -23,8 +23,8 @@ import (
 
 	"flag"
 	
-	"./auklib"
-	"./schedule"
+	"github.com/google/aukera/auklib"
+	"github.com/google/aukera/schedule"
 	"github.com/gorilla/mux"
 	"github.com/google/logger"
 )
