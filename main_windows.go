@@ -19,7 +19,7 @@ package main
 import (
 	"fmt"
 
-	"./auklib"
+	"github.com/google/aukera/auklib"
 	"golang.org/x/sys/windows/svc/debug"
 	"golang.org/x/sys/windows/svc"
 	"github.com/google/logger"

@@ -21,7 +21,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"../window"
+	"github.com/google/aukera/window"
 )
 
 const (

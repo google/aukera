@@ -19,8 +19,8 @@ import (
 	"strings"
 	"time"
 
-	"../auklib"
-	"../window"
+	"github.com/google/aukera/auklib"
+	"github.com/google/aukera/window"
 	"github.com/google/logger"
 )
 
