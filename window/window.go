@@ -542,7 +542,8 @@ func Windows(dir string, cr ConfigReader) (Map, error) {
 		s := struct {
 			Windows []Window
 		}{}
-		b, err := cr.JSONContent(filepath.Join(dir, f.Name()))
+		fp := filepath.Join(dir, f.Name())
+		b, err := cr.JSONContent(fp)
 		if err != nil {
 			logger.Errorf("error reading file %q: %v", f.Name(), err)
 			continue
