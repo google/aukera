@@ -42,7 +42,7 @@ func PathExists(path string) (bool, error) {
 	return true, nil
 }
 
-// UniqueStrings returns a deduplicated represenation of the passed string slice.
+// UniqueStrings returns a deduplicated representation of the passed string slice.
 func UniqueStrings(slice []string) []string {
 	var unique []string
 	m := make(map[string]bool)
