@@ -29,8 +29,8 @@ const (
 )
 
 // Test validates service is available and responding locally.
-func Test(port int) bool {
-	response, err := http.Get(fmt.Sprintf("%s:%d/status", urlBase, port))
+func Test(url string) bool {
+	response, err := http.Get(fmt.Sprintf("%s/status", url))
 	if err != nil {
 		return false
 	}
@@ -39,7 +39,7 @@ func Test(port int) bool {
 
 // Label gets a window schedule by label name(s).
 func Label(port int, names ...string) ([]window.Schedule, error) {
-	if !Test(port) {
+	if !Test(fmt.Sprintf("%s:%d", urlBase, port)) {
 		return nil, fmt.Errorf("service not available")
 	}
 	var urls []string
