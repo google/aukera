@@ -24,6 +24,39 @@ import (
 	"github.com/google/logger"
 )
 
+// findNearest calculates the nearest schedule to now to present to the user
+func findNearest(schedules []window.Schedule) window.Schedule {
+	var next window.Schedule
+	now := time.Now()
+	for _, s := range schedules {
+		// prefer an open schedule
+		if s.IsOpen() {
+			next = s
+			break
+		}
+		// Evaluate the next, closest closed schedule
+		if next.Opens.IsZero() {
+			next = s
+			continue
+		}
+		bestOpens := next.Opens.Sub(now).Seconds()
+		thisOpens := s.Opens.Sub(now).Seconds()
+		// New schedule in future, current in the past
+		if thisOpens > 0 && bestOpens < 0 {
+			next = s
+		}
+		// Both schedules in the future, new schedule closer to now
+		if thisOpens >= 0 && bestOpens >= 0 && thisOpens < bestOpens {
+			next = s
+		}
+		// Both schedules in the past, new schedule closer to now
+		if thisOpens < 0 && bestOpens < 0 && thisOpens > bestOpens {
+			next = s
+		}
+	}
+	return next
+}
+
 // Schedule calculates schedule per label and returns label whose names match the given string(s).
 func Schedule(names ...string) ([]window.Schedule, error) {
 	var r window.Reader
@@ -43,38 +76,7 @@ func Schedule(names ...string) ([]window.Schedule, error) {
 			continue
 		}
 
-		// Reset eval variables
-		var (
-			sched window.Schedule
-			now   = time.Now()
-		)
-		for _, s := range schedules {
-			// prefer an open schedule
-			if s.IsOpen() {
-				sched = s
-				break
-			}
-			// Evaluate the next, closest closed schedule
-			if sched.Opens.IsZero() {
-				sched = s
-				continue
-			}
-			untilSched := sched.Opens.Sub(now).Seconds()
-			untilS := s.Opens.Sub(now).Seconds()
-			// New schedule in future, current in the past
-			if untilS > 0 && untilSched < 0 {
-				sched = s
-			}
-			// Both schedules in the future, new schedule closer to now
-			if untilS >= 0 && untilSched >= 0 && untilS < untilSched {
-				sched = s
-			}
-			// Both schedules in the past, new schedule closer to now
-			if untilS < 0 && untilSched < 0 && untilS > untilSched {
-				sched = s
-			}
-		}
-		out = append(out, sched)
+		out = append(out, findNearest(schedules))
 	}
 	return out, nil
 }
