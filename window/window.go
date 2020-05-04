@@ -458,6 +458,11 @@ func (s *Schedule) IsOpen() bool {
 	return s.Opens.Before(now) && now.Before(s.Closes)
 }
 
+func (s Schedule) String() string {
+	return fmt.Sprintf("%s: IsOpen(%t) | Open/Close(%v/%v) | Duration(%v)",
+		s.Name, s.IsOpen(), s.Opens, s.Closes, s.Duration)
+}
+
 // ConfigReader defines filesystem interactions for Window configurations.
 type ConfigReader interface {
 	PathExists(string) (bool, error)
