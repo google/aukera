@@ -37,11 +37,7 @@ func Test(url string) bool {
 	return response.StatusCode == http.StatusOK
 }
 
-// Label gets a window schedule by label name(s).
-func Label(port int, names ...string) ([]window.Schedule, error) {
-	if !Test(fmt.Sprintf("%s:%d", urlBase, port)) {
-		return nil, fmt.Errorf("service not available")
-	}
+func makeURL(port int, names []string) []string {
 	var urls []string
 	if len(names) == 0 {
 		urls = append(urls, fmt.Sprintf("%s:%d/schedule", urlBase, port))
@@ -50,6 +46,15 @@ func Label(port int, names ...string) ([]window.Schedule, error) {
 			urls = append(urls, fmt.Sprintf("%s:%d/schedule/%s", urlBase, port, name))
 		}
 	}
+	return urls
+}
+
+// Label gets a window schedule by label name(s).
+func Label(port int, names ...string) ([]window.Schedule, error) {
+	if !Test(fmt.Sprintf("%s:%d", urlBase, port)) {
+		return nil, fmt.Errorf("service not available")
+	}
+	urls := makeURL(port, names)
 	var sched []window.Schedule
 	for _, url := range urls {
 		response, err := http.Get(url)

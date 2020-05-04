@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestLocalServiceServerRunning(t *testing.T) {
@@ -52,6 +54,29 @@ func TestLocalServiceServerStopped(t *testing.T) {
 		s := Test(ts.URL)
 		if s != tt.out {
 			t.Errorf("Test(%v) = %v, want %v", ts.URL, s, tt.out)
+		}
+	}
+}
+
+func TestMakeURL(t *testing.T) {
+	tests := []struct {
+		inNames []string
+		inPort  int
+		out     []string
+	}{
+		{[]string{"a", "b", "c"}, 1,
+			[]string{
+				"http://localhost:1/schedule/a",
+				"http://localhost:1/schedule/b",
+				"http://localhost:1/schedule/c",
+			}},
+		{[]string{}, 80, []string{"http://localhost:80/schedule"}},
+	}
+	for _, tt := range tests {
+		res := makeURL(tt.inPort, tt.inNames)
+		if !cmp.Equal(res, tt.out) {
+			t.Errorf("makeURL(%d, %v) returned diff (-want +got): %v",
+				tt.inPort, tt.inNames, cmp.Diff(res, tt.out))
 		}
 	}
 }
