@@ -55,16 +55,25 @@ func Label(port int, names ...string) ([]window.Schedule, error) {
 		return nil, fmt.Errorf("service not available")
 	}
 	urls := makeURL(port, names)
+	return readSchedules(urls)
+}
+
+func readSchedules(urls []string) ([]window.Schedule, error) {
 	var sched []window.Schedule
 	for _, url := range urls {
 		response, err := http.Get(url)
 		if err != nil {
 			return nil, err
 		}
+		if response.StatusCode != http.StatusOK {
+			return sched, fmt.Errorf(
+				"schedule request failed for url %s (%d)", url, response.StatusCode)
+		}
 		j, err := ioutil.ReadAll(response.Body)
 		if err != nil {
 			return nil, err
 		}
+
 		var s []window.Schedule
 		if err := json.Unmarshal(j, &s); err != nil {
 			return nil, err

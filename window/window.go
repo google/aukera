@@ -381,8 +381,8 @@ func (s *Schedule) UnmarshalJSON(b []byte) error {
 	}
 
 	var temp = struct {
-		State, Duration string
-		Opens, Closes   time.Time
+		Name, State, Duration string
+		Opens, Closes         time.Time
 	}{}
 	err := json.Unmarshal(b, &temp)
 	if err != nil {
@@ -394,6 +394,7 @@ func (s *Schedule) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	s.Name = temp.Name
 	s.State = temp.State
 	s.Opens = temp.Opens
 	s.Closes = temp.Closes

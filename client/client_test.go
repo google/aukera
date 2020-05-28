@@ -15,11 +15,13 @@
 package client
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/aukera/window"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -91,6 +93,81 @@ func TestMakeURL(t *testing.T) {
 		if !cmp.Equal(res, tt.out) {
 			t.Errorf("makeURL(%d, %v) returned diff (-want +got): %v",
 				tt.inPort, tt.inNames, cmp.Diff(res, tt.out))
+		}
+	}
+}
+
+func dummyServer(w http.ResponseWriter, r *http.Request) {
+	switch path := r.URL.Path; path {
+	case "/schedule/a":
+		w.WriteHeader(http.StatusOK)
+		s, _ := json.Marshal(&[]window.Schedule{
+			window.Schedule{Name: "Schedule A"},
+		})
+		w.Write(s)
+	case "/schedule/b":
+		w.WriteHeader(http.StatusOK)
+		s, _ := json.Marshal(&[]window.Schedule{
+			window.Schedule{Name: "Schedule B"},
+		})
+		w.Write(s)
+	case "/schedule/c":
+		w.WriteHeader(http.StatusOK)
+		s, _ := json.Marshal(&[]window.Schedule{
+			window.Schedule{Name: "Schedule C"},
+			window.Schedule{Name: "Schedule D"},
+		})
+		w.Write(s)
+	case "/schedule/e":
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("invalid json"))
+	default:
+		http.Error(w, "missing", 404)
+	}
+}
+
+func TestReadSchedules(t *testing.T) {
+	tests := []struct {
+		in       []string
+		out      []string
+		errIsNil bool
+	}{{[]string{
+		"/schedule/a",
+		"/schedule/b",
+		"/schedule/c",
+	}, []string{
+		"Schedule A",
+		"Schedule B",
+		"Schedule C",
+		"Schedule D"}, true},
+		{[]string{
+			"/schedule/c",
+			"/schedule/v", // 404
+		}, []string{
+			"Schedule C",
+			"Schedule D",
+		}, false},
+		{[]string{
+			"/schedule/e", // invalid
+		}, []string{}, false},
+	}
+	for _, tt := range tests {
+		ts := httptest.NewServer(http.HandlerFunc(dummyServer))
+		urls := []string{}
+		for _, path := range tt.in {
+			urls = append(urls, ts.URL+path)
+		}
+		s, err := readSchedules(urls)
+		if (err == nil) != tt.errIsNil {
+			t.Errorf("TestReadSchedules(%v) error got %v", urls, err)
+		}
+		names := []string{}
+		for _, w := range s {
+			names = append(names, w.Name)
+		}
+		if !cmp.Equal(tt.out, names) {
+			t.Errorf("TestReadSchedules(%v): returned diff (-want +got): %v",
+				urls, cmp.Diff(tt.out, names))
 		}
 	}
 }
