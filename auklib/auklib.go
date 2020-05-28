@@ -47,19 +47,11 @@ func UniqueStrings(slice []string) []string {
 	var unique []string
 	m := make(map[string]bool)
 	for _, s := range slice {
+		s = strings.ToLower(s)
 		if !m[s] {
 			m[s] = true
 			unique = append(unique, s)
 		}
 	}
 	return unique
-}
-
-// ToLowerSlice lowers capitalization of every string in the given slice.
-func ToLowerSlice(slice []string) []string {
-	var out []string
-	for _, s := range slice {
-		out = append(out, strings.ToLower(s))
-	}
-	return out
 }

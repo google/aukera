@@ -220,7 +220,7 @@ func (w *Window) UnmarshalJSON(b []byte) error {
 	if len(conv.Labels) == 0 {
 		return fmt.Errorf("window(%s): window must have minimum of one label (found: %d)", w.Name, len(conv.Labels))
 	}
-	w.Labels = auklib.UniqueStrings(auklib.ToLowerSlice(conv.Labels))
+	w.Labels = auklib.UniqueStrings(conv.Labels)
 
 	w.Starts = conv.Starts
 	w.Expires = conv.Expires
