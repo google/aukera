@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"flag"
 	
@@ -30,7 +31,6 @@ import (
 )
 
 var (
-	rtr        = mux.NewRouter()
 	runInDebug = flag.Bool("debug", false, "Run in debug mode")
 	port       = flag.Int("port", 9119, "Define listening port")
 )
@@ -65,14 +65,24 @@ func respondOk(w http.ResponseWriter, r *http.Request) {
 }
 
 func runMainLoop() error {
+	rtr := mux.NewRouter()
 	rtr.HandleFunc("/status", respondOk)
 	rtr.HandleFunc("/schedule", serve)
 	rtr.HandleFunc("/schedule/{label}", serve)
-	return http.ListenAndServe(fmt.Sprintf(":%d", *port), rtr)
+
+	srv := &http.Server{
+		Addr:         fmt.Sprintf(":%d", *port),
+		WriteTimeout: time.Second * 15,
+		ReadTimeout:  time.Second * 15,
+		IdleTimeout:  time.Second * 60,
+		Handler:      rtr,
+	}
+	return srv.ListenAndServe()
 }
 
 func main() {
 	
+
 	// Initialize configuration directory
 	exist, err := auklib.PathExists(auklib.ConfDir)
 	if err != nil {
@@ -94,6 +104,6 @@ func main() {
 
 	err = run()
 	if err != nil {
-
+		logger.Fatalln("Run exited with error: ", err)
 	}
 }
