@@ -65,6 +65,7 @@ func readSchedules(urls []string) ([]window.Schedule, error) {
 		if err != nil {
 			return nil, err
 		}
+		defer response.Body.Close()
 		if response.StatusCode != http.StatusOK {
 			return sched, fmt.Errorf(
 				"schedule request failed for url %s (%d)", url, response.StatusCode)
