@@ -1,5 +1,7 @@
 # Aukera
 
+[![Go Tests](https://github.com/google/aukera/workflows/Go%20Tests/badge.svg)](https://github.com/google/aukera/actions?query=workflow%3A%22Go+Tests%22)
+
 Aukera is a tool developed at Google for scheduling maintenance windows
 discoverable via a local API.
 
