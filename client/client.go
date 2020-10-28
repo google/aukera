@@ -34,6 +34,8 @@ func Test(url string) bool {
 	if err != nil {
 		return false
 	}
+	defer response.Body.Close()
+
 	return response.StatusCode == http.StatusOK
 }
 
