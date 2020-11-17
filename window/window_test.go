@@ -29,7 +29,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/robfig/cron"
+	"github.com/robfig/cron/v3"
 	"github.com/google/logger"
 )
 
