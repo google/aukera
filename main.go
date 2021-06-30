@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"flag"
-	
 	"github.com/google/aukera/auklib"
 	"github.com/google/aukera/schedule"
 	"github.com/gorilla/mux"
@@ -81,8 +80,6 @@ func runMainLoop() error {
 }
 
 func main() {
-	
-
 	// Initialize configuration directory
 	exist, err := auklib.PathExists(auklib.ConfDir)
 	if err != nil {
