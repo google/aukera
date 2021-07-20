@@ -16,9 +16,11 @@
 package schedule
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
+	"github.com/google/cabbie/metrics"
 	"github.com/google/aukera/auklib"
 	"github.com/google/aukera/window"
 	"github.com/google/logger"
@@ -71,10 +73,20 @@ func Schedule(names ...string) ([]window.Schedule, error) {
 	var out []window.Schedule
 	for i := range names {
 		schedules := m.AggregateSchedules(names[i])
+		var success int64 = 1
 		if len(schedules) == 0 {
 			logger.Errorf("no schedule found for label %q", names[i])
+			success = 0
 			continue
 		}
+
+		metricName := fmt.Sprintf("%s/%s", auklib.MetricRoot, "schedule_retrieved")
+		metric, err := metrics.NewInt(metricName, auklib.MetricSvc)
+		if err != nil {
+			logger.Warningf("could not create metric: %v", err)
+		}
+		metric.Data.AddStringField("request", names[i])
+		metric.Set(success)
 
 		out = append(out, findNearest(schedules))
 	}
