@@ -28,4 +28,9 @@ var (
 	ConfDir = filepath.Join(DataDir, "conf")
 	// LogPath defines active log file filesystem location.
 	LogPath = filepath.Join(DataDir, "aukera.log")
+
+	// MetricRoot sets metric path for all aukera metrics
+	MetricRoot = `/aukera/metrics`
+	// MetricSvc sets platform source for metrics.
+	MetricSvc = "aukera"
 )

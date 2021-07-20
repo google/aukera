@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/cabbie/metrics"
 	"github.com/google/aukera/auklib"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -552,15 +553,28 @@ func Windows(dir string, cr ConfigReader) (Map, error) {
 		b, err := cr.JSONContent(fp)
 		if err != nil {
 			logger.Errorf("error reading file %q: %v", f.Name(), err)
+			reportConfFileMetric(fp, "read_err")
 			continue
 		}
 		if err := json.Unmarshal(b, &s); err != nil {
 			logger.Errorf("UnmarshalJSON error: file %q: %v", f.Name(), err)
+			reportConfFileMetric(fp, "unmarshal_err")
 			continue
 		}
+		reportConfFileMetric(fp, "ok")
 		windows = append(windows, s.Windows...)
 	}
 	m := make(Map)
 	m.Add(windows...)
 	return m, nil
+}
+
+func reportConfFileMetric(path, result string) {
+	m, err := metrics.NewString(fmt.Sprintf("%s/%s", auklib.MetricRoot, "config_loader"), auklib.MetricSvc)
+	if err != nil {
+		logger.Warningf("could not create metric: %v", err)
+		return
+	}
+	m.Data.AddStringField("file_path", path)
+	m.Set(result)
 }

@@ -3,6 +3,7 @@ module github.com/google/aukera
 go 1.15
 
 require (
+        github.com/google/cabbie v1.0.3-0.20210720165919-9cf1b44a02bb
         github.com/google/go-cmp v0.5.4
         github.com/google/logger v1.1.0
         github.com/gorilla/mux v1.8.0

@@ -23,4 +23,9 @@ var (
 	ConfDir = "/etc/aukera"
 	// LogPath defines active log file filesystem location.
 	LogPath = "/var/log/aukera.log"
+
+	// MetricSvc sets platform source for metrics.
+	MetricSvc = "aukera"
+	// MetricRoot sets metric path for all aukera metrics
+	MetricRoot = `/aukera/metrics`
 )
