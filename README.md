@@ -13,8 +13,9 @@ Aukera was written with the following goals in mind:
 
 Maintenance windows are configured and consumed as JSON. This allows engineers
 to leverage source control systems to maintain window definition. By keeping
-maintanence window configs in source control, we gain peer review, change history,
-rollback/forward, and all the other benefits normally reserved for writing code.
+maintanence window configs in source control, we gain peer review, change
+history, rollback/forward, and all the other benefits normally reserved for
+writing code.
 
 ### Flexibility
 
@@ -35,8 +36,7 @@ Build It!
 
 ## Disclaimer
 
-Aukera is maintained by a small team at Google. Support for this repo is
-treated as best effort, and issues will be responded to as engineering time
-permits.
+Aukera is maintained by a small team at Google. Support for this repo is treated
+as best effort, and issues will be responded to as engineering time permits.
 
 This is not an official Google product.
