@@ -1,6 +1,7 @@
 # Aukera
 
 [![Go Tests](https://github.com/google/aukera/workflows/Go%20Tests/badge.svg)](https://github.com/google/aukera/actions?query=workflow%3A%22Go+Tests%22)
+[![release](https://github.com/TsekNet/aukera/actions/workflows/release.yml/badge.svg)](https://github.com/TsekNet/aukera/actions/workflows/release.yml)
 
 Aukera is a tool developed at Google for scheduling maintenance windows
 discoverable via a local API.
@@ -32,7 +33,14 @@ afterward.
 
 ## Getting Started
 
-Build It!
+Pre-compiled binaries are available as
+[release assets](https://github.com/google/aukera/releases).
+
+Building Aukera manually:
+
+1.  Clone the repository
+1.  Install any missing imports with `go get -u`
+1.  Run `go build C:\Path\to\aukera\src`
 
 ## Disclaimer
 

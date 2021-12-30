@@ -1,0 +1,21 @@
+# Make sure to check the documentation at https://goreleaser.com
+before:
+  hooks:
+    # You may remove this if you don't use go modules.
+    - go mod tidy
+builds:
+  # Custom environment variables to be set during the builds.
+  - env:
+      - CGO_ENABLED=0
+    # For more info refer to: https://golang.org/doc/install/source#environment
+    goos:
+      - linux
+      - windows
+    goarch:
+      - amd64
+archives:
+  # Optionally override the matrix generation and specify only the final list of targets.
+  - format: binary
+    name_template: "{{ tolower .ProjectName }}_{{ .Os }}"
+checksum:
+  name_template: "checksums.txt"
