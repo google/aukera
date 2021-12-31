@@ -1,7 +1,7 @@
 # Aukera
 
 [![Go Tests](https://github.com/google/aukera/workflows/Go%20Tests/badge.svg)](https://github.com/google/aukera/actions?query=workflow%3A%22Go+Tests%22)
-[![release](https://github.com/TsekNet/aukera/actions/workflows/release.yml/badge.svg)](https://github.com/TsekNet/aukera/actions/workflows/release.yml)
+[![release](https://github.com/google/aukera/actions/workflows/release.yml/badge.svg)](https://github.com/google/aukera/actions/workflows/release.yml)
 
 Aukera is a tool developed at Google for scheduling maintenance windows
 discoverable via a local API.
@@ -14,7 +14,7 @@ Aukera was written with the following goals in mind:
 
 Maintenance windows are configured and consumed as JSON. This allows engineers
 to leverage source control systems to maintain window definition. By keeping
-maintanence window configs in source control, we gain peer review, change
+maintenance window configs in source control, we gain peer review, change
 history, rollback/forward, and all the other benefits normally reserved for
 writing code.
 
