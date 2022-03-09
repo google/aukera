@@ -33,9 +33,7 @@ import (
 	"github.com/google/logger"
 )
 
-var now = time.Now().Local()
-
-func testData() ([]Window, error) {
+func testData(now time.Time) ([]Window, error) {
 	var testData = []struct {
 		JSON            []byte
 		Starts, Expires time.Time
@@ -325,7 +323,7 @@ func TestCalculateSchedule(t *testing.T) {
 		}
 	)
 	// Populate Window Map
-	d, err := testData()
+	d, err := testData(time.Now())
 	if err != nil {
 		t.Fatalf("TestCalculateSchedule(): error getting test data: %v", err)
 	}
@@ -354,7 +352,7 @@ func TestCalculateSchedule(t *testing.T) {
 }
 
 func TestWindowMarshal(t *testing.T) {
-	tests, err := testData()
+	tests, err := testData(time.Now())
 	if err != nil {
 		t.Fatalf("TestWindowMarshal(): error getting test data: %v", err)
 	}
@@ -366,7 +364,7 @@ func TestWindowMarshal(t *testing.T) {
 }
 
 func TestMapKeys(t *testing.T) {
-	tests, err := testData()
+	tests, err := testData(time.Now())
 	if err != nil {
 		t.Fatalf("TestWindowMarshal(): error getting test data: %v", err)
 	}
@@ -385,7 +383,7 @@ func TestMapKeys(t *testing.T) {
 }
 
 func TestMapFind(t *testing.T) {
-	tests, err := testData()
+	tests, err := testData(time.Now())
 	if err != nil {
 		t.Fatalf("TestWindowMarshal(): error getting test data: %v", err)
 	}
@@ -401,7 +399,7 @@ func TestMapFind(t *testing.T) {
 }
 
 func TestMapMarshal(t *testing.T) {
-	tests, err := testData()
+	tests, err := testData(time.Now())
 	if err != nil {
 		t.Fatalf("TestWindowMarshal(): error getting test data: %v", err)
 	}
@@ -511,7 +509,9 @@ func (mfi mockFileInfo) Name() string {
 }
 
 // Mock ConfigReader for window.Windows() tests
-type TestReader struct{}
+type TestReader struct {
+	windows []Window
+}
 
 func (r TestReader) PathExists(path string) (bool, error) {
 	return true, nil
@@ -530,12 +530,8 @@ func (r TestReader) JSONContent(path string) ([]byte, error) {
 		return nil, fmt.Errorf("file is not JSON")
 	}
 
-	windows, err := testData()
-	if err != nil {
-		return nil, fmt.Errorf("error getting test data: %v", err)
-	}
 	m := make(Map)
-	m.Add(windows...)
+	m.Add(r.windows...)
 	b, err := json.Marshal(m)
 	if err != nil {
 		return nil, err
@@ -544,7 +540,7 @@ func (r TestReader) JSONContent(path string) ([]byte, error) {
 }
 
 func TestWindows(t *testing.T) {
-	windows, err := testData()
+	windows, err := testData(time.Now().Local())
 	if err != nil {
 		t.Fatalf("TestWindows(): error getting test data: %v", err)
 	}
@@ -570,7 +566,7 @@ func TestWindows(t *testing.T) {
 		},
 	}
 
-	var r TestReader
+	r := TestReader{windows}
 	var logBuffer bytes.Buffer
 	logger.Init("TestWindows", false, false, &logBuffer)
 
@@ -587,8 +583,8 @@ func TestWindows(t *testing.T) {
 				t.Errorf("TestWindows(%q): unexpected error message: %q did not match regex %q", tst.desc, errMsg, tst.errRegex)
 			}
 		}
-		if !cmp.Equal(m, tst.mapExpect, cmpopts.IgnoreFields(cron.SpecSchedule{}, "Location")) {
-			t.Errorf("TestWindows(%q): unexpected map value: got: %+v; want: %+v", tst.desc, m, tst.mapExpect)
+		if diff := cmp.Diff(m, tst.mapExpect, cmpopts.IgnoreFields(cron.SpecSchedule{}, "Location")); diff != "" {
+			t.Errorf("TestWindows(%q): produced unexpected diff: %s", tst.desc, diff)
 		}
 		logBuffer.Reset()
 	}
@@ -631,77 +627,91 @@ func TestWindowActivation(t *testing.T) {
 	}
 }
 
-var (
-	// templated schedules
-	schedA = Schedule{
-		Opens:    now.Add(-5 * time.Minute),
-		Closes:   now,
-		Duration: (5 * time.Minute),
-	}
-	schedOverlap = Schedule{
-		Opens:    now.Add(-2 * time.Minute),
-		Closes:   now.Add(2 * time.Minute),
-		Duration: (4 * time.Minute),
-	}
-	schedB = Schedule{
-		Opens:    now,
-		Closes:   now.Add(5 * time.Minute),
-		Duration: (5 * time.Minute),
-	}
-	schedBig = Schedule{
-		Opens:    now.Add(-5 * time.Minute),
-		Closes:   now.Add(10 * time.Minute),
-		Duration: (15 * time.Minute),
-	}
+type schedules struct {
+	schedA       Schedule
+	schedOverlap Schedule
+	schedB       Schedule
+	schedBig     Schedule
+}
 
-	comparisonTests = []struct {
-		desc                    string
-		base, compare, combined Schedule
-		overlaps                bool
-	}{
+type compTest struct {
+	desc                    string
+	base, compare, combined Schedule
+	overlaps                bool
+}
+
+func (s *schedules) comparisonTests() []compTest {
+	return []compTest{
 		{"base in compare",
-			schedA,
-			schedBig,
-			schedBig,
+			s.schedA,
+			s.schedBig,
+			s.schedBig,
 			true,
 		},
 		{"base later than compare",
-			schedOverlap,
-			schedA,
+			s.schedOverlap,
+			s.schedA,
 			Schedule{
-				Opens:    schedA.Opens,
-				Closes:   schedOverlap.Closes,
+				Opens:    s.schedA.Opens,
+				Closes:   s.schedOverlap.Closes,
 				Duration: (7 * time.Minute),
 			},
 			true,
 		},
 		{"base earlier than compare",
-			schedA,
-			schedOverlap,
+			s.schedA,
+			s.schedOverlap,
 			Schedule{
-				Opens:    schedA.Opens,
-				Closes:   schedOverlap.Closes,
+				Opens:    s.schedA.Opens,
+				Closes:   s.schedOverlap.Closes,
 				Duration: (7 * time.Minute),
 			},
 			true,
 		},
 		{"base matches compare",
-			schedA,
-			schedA,
-			schedA,
+			s.schedA,
+			s.schedA,
+			s.schedA,
 			true,
 		},
 		{"no overlap",
-			schedA,
-			schedB,
-			schedA,
+			s.schedA,
+			s.schedB,
+			s.schedA,
 			false,
 		},
 	}
-)
+}
+
+// templated schedules
+func makeSchedules(now time.Time) schedules {
+	return schedules{
+		schedA: Schedule{
+			Opens:    now.Add(-5 * time.Minute),
+			Closes:   now,
+			Duration: (5 * time.Minute),
+		},
+		schedOverlap: Schedule{
+			Opens:    now.Add(-2 * time.Minute),
+			Closes:   now.Add(2 * time.Minute),
+			Duration: (4 * time.Minute),
+		},
+		schedB: Schedule{
+			Opens:    now,
+			Closes:   now.Add(5 * time.Minute),
+			Duration: (5 * time.Minute),
+		},
+		schedBig: Schedule{
+			Opens:    now.Add(-5 * time.Minute),
+			Closes:   now.Add(10 * time.Minute),
+			Duration: (15 * time.Minute),
+		},
+	}
+}
 
 func TestScheduleOverlaps(t *testing.T) {
-	for _, e := range comparisonTests {
+	s := makeSchedules(time.Now().Local())
+	for _, e := range s.comparisonTests() {
 		if overlaps := e.base.Overlaps(e.compare); overlaps != e.overlaps {
 			t.Errorf("TestScheduleOverlaps(%q) got %t; want %t", e.desc, e.overlaps, overlaps)
 		}
@@ -709,7 +719,8 @@ func TestScheduleOverlaps(t *testing.T) {
 }
 
 func TestScheduleCombine(t *testing.T) {
-	for _, e := range comparisonTests {
+	s := makeSchedules(time.Now().Local())
+	for _, e := range s.comparisonTests() {
 		err := e.base.Combine(e.compare)
 		if err != nil && e.overlaps {
 			t.Errorf("TestScheduleCombine(%q) error: %v", e.desc, err)
@@ -762,11 +773,12 @@ func TestScheduleClosed(t *testing.T) {
 }
 
 func TestDedupSchedules(t *testing.T) {
+	s := makeSchedules(time.Now().Local())
 	test := struct {
 		input, want []Schedule
 	}{
-		input: []Schedule{schedA, schedA, schedB, schedOverlap, schedB, schedBig},
-		want:  []Schedule{schedA, schedB, schedOverlap, schedBig},
+		input: []Schedule{s.schedA, s.schedA, s.schedB, s.schedOverlap, s.schedB, s.schedBig},
+		want:  []Schedule{s.schedA, s.schedB, s.schedOverlap, s.schedBig},
 	}
 	sort.Slice(test.want, func(i int, j int) bool {
 		return test.want[i].Opens.Before(test.want[j].Opens)
