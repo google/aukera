@@ -31,7 +31,7 @@ import (
 
 var (
 	runInDebug = flag.Bool("debug", false, "Run in debug mode")
-	port       = flag.Int("port", 9119, "Define listening port")
+	port       = flag.Int("port", auklib.ServicePort, "Define listening port")
 )
 
 func sendHTTPResponse(w http.ResponseWriter, statusCode int, message []byte) {

@@ -24,6 +24,9 @@ import (
 const (
 	// ServiceName defines the name of Aukera Windows service.
 	ServiceName = "Aukera"
+
+	// ServicePort is the default port the Aukera HTTP service is listening on.
+	ServicePort = 9119
 )
 
 // PathExists used for determining if path exists already.
