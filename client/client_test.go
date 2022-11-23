@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/google/aukera/window"
-	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp"
 )
 
 func TestLocalServiceServerRunning(t *testing.T) {

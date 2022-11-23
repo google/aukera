@@ -28,8 +28,8 @@ import (
 
 	"github.com/google/cabbie/metrics"
 	"github.com/google/aukera/auklib"
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/go-cmp"
+	"github.com/google/go-cmp/cmpopts"
 	"github.com/robfig/cron/v3"
 	"github.com/google/logger"
 )
