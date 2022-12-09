@@ -27,10 +27,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/deck/backends/logger"
+	"github.com/google/deck"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/robfig/cron/v3"
-	"github.com/google/logger"
 )
 
 func testData(now time.Time) ([]Window, error) {
@@ -568,7 +569,7 @@ func TestWindows(t *testing.T) {
 
 	r := TestReader{windows}
 	var logBuffer bytes.Buffer
-	logger.Init("TestWindows", false, false, &logBuffer)
+	deck.Add(logger.Init(&logBuffer, 0))
 
 	for _, tst := range tests {
 		m, _ := Windows(tst.path, r)

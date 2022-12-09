@@ -23,10 +23,11 @@ import (
 	"time"
 
 	"flag"
+	"github.com/google/deck/backends/logger"
+	"github.com/google/deck"
 	"github.com/google/aukera/auklib"
 	"github.com/google/aukera/schedule"
 	"github.com/gorilla/mux"
-	"github.com/google/logger"
 )
 
 var (
@@ -38,7 +39,7 @@ func sendHTTPResponse(w http.ResponseWriter, statusCode int, message []byte) {
 	w.WriteHeader(statusCode)
 	i, err := w.Write(message)
 	if err != nil {
-		logger.Errorf("error writing response: [%d] %v", i, err)
+		deck.Errorf("error writing response: [%d] %v", i, err)
 	}
 }
 
@@ -83,24 +84,31 @@ func main() {
 	// Initialize configuration directory
 	exist, err := auklib.PathExists(auklib.ConfDir)
 	if err != nil {
-		logger.Errorf("unexpected error finding path %s: %v", auklib.ConfDir, err)
+		deck.Errorf("unexpected error finding path %s: %v", auklib.ConfDir, err)
 	}
 	if exist == false {
-		logger.Warning("Configuration directory does not exist. Attempting creation.")
+		deck.Warning("Configuration directory does not exist. Attempting creation.")
 		if err := os.MkdirAll(auklib.ConfDir, 0664); err != nil {
-			logger.Warningf("Unable to create configuration directory: %v", err)
+			deck.Warningf("Unable to create configuration directory: %v", err)
 		}
 	}
+
 	// Initialize logger
 	lf, err := os.OpenFile(auklib.LogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0664)
 	if err != nil {
-		logger.Fatalln("Failed to open log file: ", err)
+		deck.Fatalln("Failed to open log file: ", err)
 	}
 	defer lf.Close()
-	defer logger.Init("aukera", false, true, lf).Close()
+	deck.Add(logger.Init(lf, 0))
+	defer deck.Close()
+
+	if err := setup(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	err = run()
 	if err != nil {
-		logger.Fatalln("Run exited with error: ", err)
+		deck.Fatalln("Run exited with error: ", err)
 	}
 }
