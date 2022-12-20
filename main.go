@@ -27,7 +27,6 @@ import (
 	"github.com/google/deck"
 	"github.com/google/aukera/auklib"
 	"github.com/google/aukera/schedule"
-	"github.com/gorilla/mux"
 )
 
 var (
@@ -44,10 +43,13 @@ func sendHTTPResponse(w http.ResponseWriter, statusCode int, message []byte) {
 }
 
 func serve(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
+	if err := r.ParseForm(); err != nil {
+		sendHTTPResponse(w, http.StatusInternalServerError, []byte(err.Error()))
+	}
+	label := r.PostFormValue("label")
 	var req []string
-	if vars["label"] != "" {
-		req = append(req, vars["label"])
+	if label != "" {
+		req = append(req, label)
 	}
 	s, err := schedule.Schedule(req...)
 	if err != nil {
@@ -65,17 +67,15 @@ func respondOk(w http.ResponseWriter, r *http.Request) {
 }
 
 func runMainLoop() error {
-	rtr := mux.NewRouter()
-	rtr.HandleFunc("/status", respondOk)
-	rtr.HandleFunc("/schedule", serve)
-	rtr.HandleFunc("/schedule/{label}", serve)
+	http.HandleFunc("/status", respondOk)
+	http.HandleFunc("/schedule", serve)
+	http.HandleFunc("/schedule/{label}", serve)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", *port),
 		WriteTimeout: time.Second * 15,
 		ReadTimeout:  time.Second * 15,
 		IdleTimeout:  time.Second * 60,
-		Handler:      rtr,
 	}
 	return srv.ListenAndServe()
 }
