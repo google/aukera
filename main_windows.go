@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build windows
 // +build windows
 
 package main
@@ -19,17 +20,27 @@ package main
 import (
 	"fmt"
 
+	"github.com/google/deck/backends/eventlog"
+	"github.com/google/deck"
 	"github.com/google/aukera/auklib"
 	"golang.org/x/sys/windows/svc/debug"
 	"golang.org/x/sys/windows/svc"
-	"github.com/google/logger"
 )
 
 // Type winSvc implements svc.Handler.
 type winSvc struct{}
 
+func setup() error {
+	evt, err := eventlog.Init("aukera")
+	if err != nil {
+		return err
+	}
+	deck.Add(evt)
+	return nil
+}
+
 func startService(isDebug bool) error {
-	logger.Infof("Starting %s service.", auklib.ServiceName)
+	deck.Infof("Starting %s service.", auklib.ServiceName)
 	run := svc.Run
 	if isDebug {
 		run = debug.Run
@@ -37,7 +48,7 @@ func startService(isDebug bool) error {
 	if err := run(auklib.ServiceName, winSvc{}); err != nil {
 		return fmt.Errorf("%s service failed: %v", auklib.ServiceName, err)
 	}
-	logger.Infof("%s service stopped.", auklib.ServiceName)
+	deck.Infof("%s service stopped.", auklib.ServiceName)
 	return nil
 }
 
@@ -59,7 +70,7 @@ func (m winSvc) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<
 	go func() {
 		errch <- runMainLoop()
 	}()
-	logger.Infof("Service started.")
+	deck.Infof("Service started.")
 
 	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 loop:
@@ -67,7 +78,7 @@ loop:
 		select {
 		// Watch for the aukera goroutine to fail for some reason.
 		case err := <-errch:
-			logger.Errorf("%s goroutine has failed: %v", auklib.ServiceName, err)
+			deck.Errorf("%s goroutine has failed: %v", auklib.ServiceName, err)
 			break loop
 		// Watch for service signals.
 		case c := <-r:
@@ -81,7 +92,7 @@ loop:
 			case svc.Continue:
 				changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
 			default:
-				logger.Errorf("unexpected control request #%d", c)
+				deck.Errorf("unexpected control request #%d", c)
 			}
 		}
 	}

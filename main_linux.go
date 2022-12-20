@@ -16,6 +16,10 @@
 
 package main
 
+func setup() error {
+	return nil
+}
+
 // Stub for running Aukera on Linux.
 func run() error {
 	return nil

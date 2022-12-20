@@ -21,9 +21,9 @@ import (
 	"time"
 
 	"github.com/google/cabbie/metrics"
+	"github.com/google/deck"
 	"github.com/google/aukera/auklib"
 	"github.com/google/aukera/window"
-	"github.com/google/logger"
 )
 
 // findNearest calculates the nearest schedule to now to present to the user
@@ -69,13 +69,13 @@ func Schedule(names ...string) ([]window.Schedule, error) {
 	if len(names) == 0 {
 		names = m.Keys()
 	}
-	logger.Infof("Aggregating schedule for label(s): %s", strings.Join(names, ", "))
+	deck.Infof("Aggregating schedule for label(s): %s", strings.Join(names, ", "))
 	var out []window.Schedule
 	for i := range names {
 		schedules := m.AggregateSchedules(names[i])
 		var success int64 = 1
 		if len(schedules) == 0 {
-			logger.Errorf("no schedule found for label %q", names[i])
+			deck.Errorf("no schedule found for label %q", names[i])
 			success = 0
 			continue
 		}
@@ -83,7 +83,7 @@ func Schedule(names ...string) ([]window.Schedule, error) {
 		metricName := fmt.Sprintf("%s/%s", auklib.MetricRoot, "schedule_retrieved")
 		metric, err := metrics.NewInt(metricName, auklib.MetricSvc)
 		if err != nil {
-			logger.Warningf("could not create metric: %v", err)
+			deck.Warningf("could not create metric: %v", err)
 		}
 		metric.Data.AddStringField("request", names[i])
 		metric.Set(success)

@@ -27,11 +27,11 @@ import (
 	"time"
 
 	"github.com/google/cabbie/metrics"
+	"github.com/google/deck"
 	"github.com/google/aukera/auklib"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/robfig/cron/v3"
-	"github.com/google/logger"
 )
 
 // Format defines enum type for schedule formats.
@@ -313,7 +313,7 @@ func (w *Window) NextActivation(ts time.Time) time.Time {
 
 	cr, err := cronParser.Parse("* * * * * *")
 	if err != nil {
-		logger.Warningf("NextActivation: error parsing open cron string")
+		deck.Warningf("NextActivation: error parsing open cron string")
 	}
 	// An open cron string (activates every minute) will never reach a quorum
 	// between two values. Return given time after seconds are removed.
@@ -552,12 +552,12 @@ func Windows(dir string, cr ConfigReader) (Map, error) {
 		fp := filepath.Join(dir, f.Name())
 		b, err := cr.JSONContent(fp)
 		if err != nil {
-			logger.Errorf("error reading file %q: %v", f.Name(), err)
+			deck.Errorf("error reading file %q: %v", f.Name(), err)
 			reportConfFileMetric(fp, "read_err")
 			continue
 		}
 		if err := json.Unmarshal(b, &s); err != nil {
-			logger.Errorf("UnmarshalJSON error: file %q: %v", f.Name(), err)
+			deck.Errorf("UnmarshalJSON error: file %q: %v", f.Name(), err)
 			reportConfFileMetric(fp, "unmarshal_err")
 			continue
 		}
@@ -572,7 +572,7 @@ func Windows(dir string, cr ConfigReader) (Map, error) {
 func reportConfFileMetric(path, result string) {
 	m, err := metrics.NewString(fmt.Sprintf("%s/%s", auklib.MetricRoot, "config_loader"), auklib.MetricSvc)
 	if err != nil {
-		logger.Warningf("could not create metric: %v", err)
+		deck.Warningf("could not create metric: %v", err)
 		return
 	}
 	m.Data.AddStringField("file_path", path)
