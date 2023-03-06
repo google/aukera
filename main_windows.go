@@ -23,6 +23,7 @@ import (
 	"github.com/google/deck/backends/eventlog"
 	"github.com/google/deck"
 	"github.com/google/aukera/auklib"
+	"github.com/google/aukera/server"
 	"golang.org/x/sys/windows/svc/debug"
 	"golang.org/x/sys/windows/svc"
 )
@@ -68,7 +69,7 @@ func (m winSvc) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<
 
 	changes <- svc.Status{State: svc.StartPending}
 	go func() {
-		errch <- runMainLoop()
+		errch <- server.Run(*port)
 	}()
 	deck.Infof("Service started.")
 

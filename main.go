@@ -16,69 +16,19 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
-	"time"
 
 	"flag"
 	"github.com/google/deck/backends/logger"
 	"github.com/google/deck"
 	"github.com/google/aukera/auklib"
-	"github.com/google/aukera/schedule"
-	"github.com/gorilla/mux"
 )
 
 var (
 	runInDebug = flag.Bool("debug", false, "Run in debug mode")
 	port       = flag.Int("port", auklib.ServicePort, "Define listening port")
 )
-
-func sendHTTPResponse(w http.ResponseWriter, statusCode int, message []byte) {
-	w.WriteHeader(statusCode)
-	i, err := w.Write(message)
-	if err != nil {
-		deck.Errorf("error writing response: [%d] %v", i, err)
-	}
-}
-
-func serve(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	var req []string
-	if vars["label"] != "" {
-		req = append(req, vars["label"])
-	}
-	s, err := schedule.Schedule(req...)
-	if err != nil {
-		sendHTTPResponse(w, http.StatusInternalServerError, []byte(err.Error()))
-	}
-	b, err := json.Marshal(&s)
-	if err != nil {
-		sendHTTPResponse(w, http.StatusInternalServerError, []byte(err.Error()))
-	}
-	sendHTTPResponse(w, http.StatusOK, b)
-}
-
-func respondOk(w http.ResponseWriter, r *http.Request) {
-	sendHTTPResponse(w, http.StatusOK, []byte("OK"))
-}
-
-func runMainLoop() error {
-	rtr := mux.NewRouter()
-	rtr.HandleFunc("/status", respondOk)
-	rtr.HandleFunc("/schedule", serve)
-	rtr.HandleFunc("/schedule/{label}", serve)
-
-	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", *port),
-		WriteTimeout: time.Second * 15,
-		ReadTimeout:  time.Second * 15,
-		IdleTimeout:  time.Second * 60,
-		Handler:      rtr,
-	}
-	return srv.ListenAndServe()
-}
 
 func main() {
 	// Initialize configuration directory
