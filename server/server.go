@@ -23,7 +23,7 @@ import (
 
 	"github.com/google/deck"
 	"github.com/google/aukera/schedule"
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 )
 
 func sendHTTPResponse(w http.ResponseWriter, statusCode int, message []byte) {
@@ -37,10 +37,10 @@ func sendHTTPResponse(w http.ResponseWriter, statusCode int, message []byte) {
 var fnSchedule = schedule.Schedule
 
 func serve(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
 	var req []string
-	if vars["label"] != "" {
-		req = append(req, vars["label"])
+	label := chi.URLParam(r, "label")
+	if label != "" {
+		req = append(req, label)
 	}
 	s, err := fnSchedule(req...)
 	if err != nil {
@@ -58,7 +58,7 @@ func respondOk(w http.ResponseWriter, r *http.Request) {
 }
 
 func muxRouter() http.Handler {
-	rtr := mux.NewRouter()
+	rtr := chi.NewRouter()
 	rtr.HandleFunc("/status", respondOk)
 	rtr.HandleFunc("/schedule", serve)
 	rtr.HandleFunc("/schedule/{label}", serve)
