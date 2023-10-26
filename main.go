@@ -16,7 +16,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"flag"
@@ -47,18 +46,20 @@ func main() {
 	lf, err := os.OpenFile(auklib.LogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0664)
 	if err != nil {
 		deck.Fatalln("Failed to open log file: ", err)
+		os.Exit(1)
 	}
 	defer lf.Close()
 	deck.Add(logger.Init(lf, 0))
 	defer deck.Close()
 
 	if err := setup(); err != nil {
-		fmt.Println(err)
+		deck.Fatalln("Setup exited with error: ", err)
 		os.Exit(1)
 	}
 
 	err = run()
 	if err != nil {
 		deck.Fatalln("Run exited with error: ", err)
+		os.Exit(1)
 	}
 }
