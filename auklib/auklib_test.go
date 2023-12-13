@@ -15,7 +15,6 @@
 package auklib
 
 import (
-	"io/ioutil"
 	"os"
 	"runtime"
 	"testing"
@@ -28,7 +27,7 @@ type pathTest struct {
 }
 
 func TestPathExists(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "")
+	tempDir, err := os.MkdirTemp("", "")
 	defer os.RemoveAll(tempDir)
 	if err != nil {
 		t.Fatalf("error creating temp directory: %v", err)
@@ -61,4 +60,3 @@ func TestEmptyPath(t *testing.T) {
 		t.Errorf("TestEmptyPath(%q) returned %t", empty.desc, b)
 	}
 }
-

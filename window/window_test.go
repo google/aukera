@@ -499,13 +499,13 @@ func TestWindowsPathNotExist(t *testing.T) {
 	}
 }
 
-// mockFileInfo is used to abstract filesystem actions.
-type mockFileInfo struct {
-	os.FileInfo
+// mockDirEntry is used to abstract filesystem actions.
+type mockDirEntry struct {
+	os.DirEntry
 	name string
 }
 
-func (mfi mockFileInfo) Name() string {
+func (mfi mockDirEntry) Name() string {
 	return mfi.name
 }
 
@@ -522,8 +522,8 @@ func (r TestReader) AbsPath(path string) (string, error) {
 	return path, nil
 }
 
-func (r TestReader) JSONFiles(path string) ([]os.FileInfo, error) {
-	return []os.FileInfo{mockFileInfo{name: path}}, nil
+func (r TestReader) JSONFiles(path string) ([]os.DirEntry, error) {
+	return []os.DirEntry{mockDirEntry{name: path}}, nil
 }
 
 func (r TestReader) JSONContent(path string) ([]byte, error) {

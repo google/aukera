@@ -18,7 +18,7 @@ package client
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/google/aukera/window"
@@ -72,7 +72,7 @@ func readSchedules(urls []string) ([]window.Schedule, error) {
 			return sched, fmt.Errorf(
 				"schedule request failed for url %s (%d)", url, response.StatusCode)
 		}
-		j, err := ioutil.ReadAll(response.Body)
+		j, err := io.ReadAll(response.Body)
 		if err != nil {
 			return nil, err
 		}

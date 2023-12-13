@@ -19,7 +19,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -152,7 +151,7 @@ func (m Map) AggregateSchedules(request string) []Schedule {
 	request = strings.ToLower(request)
 	var out, schedules []Schedule
 	for _, w := range m[request] {
-		sch := w.Schedule //dereference window schedule to set label as schedule name
+		sch := w.Schedule // dereference window schedule to set label as schedule name
 		sch.Name = request
 		schedules = append(schedules, sch)
 	}
@@ -469,7 +468,7 @@ func (s Schedule) String() string {
 type ConfigReader interface {
 	PathExists(string) (bool, error)
 	AbsPath(string) (string, error)
-	JSONFiles(string) ([]os.FileInfo, error)
+	JSONFiles(string) ([]os.DirEntry, error)
 	JSONContent(string) ([]byte, error)
 }
 
@@ -507,16 +506,16 @@ func (r Reader) AbsPath(path string) (string, error) {
 }
 
 // JSONFiles returns all JSON files in a given directory.
-func (r Reader) JSONFiles(path string) ([]os.FileInfo, error) {
+func (r Reader) JSONFiles(path string) ([]os.DirEntry, error) {
 	abs, err := r.AbsPath(path)
 	if err != nil {
 		return nil, fmt.Errorf("JSONFiles: error determining absolute path: %v", err)
 	}
-	fi, err := ioutil.ReadDir(abs)
+	fi, err := os.ReadDir(abs)
 	if err != nil {
 		return nil, fmt.Errorf("JSONFiles: failed to enumerate files in %q: %v", abs, err)
 	}
-	var files []os.FileInfo
+	var files []os.DirEntry
 	for _, f := range fi {
 		if strings.ToLower(filepath.Ext(f.Name())) != ".json" {
 			continue
@@ -535,7 +534,7 @@ func (r Reader) JSONContent(path string) ([]byte, error) {
 	if strings.ToLower(filepath.Ext(abs)) != ".json" {
 		return nil, fmt.Errorf("JSONContent: file is not JSON")
 	}
-	return ioutil.ReadFile(abs)
+	return os.ReadFile(abs)
 }
 
 // Windows gets all defined windows within given directory.
