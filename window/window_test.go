@@ -343,10 +343,10 @@ func TestCalculateSchedule(t *testing.T) {
 			)
 			t.Errorf("TestCalculateSchedule(%q) duration:: got: %s; want: %s", e.windowName, gotDur, expectDur)
 		}
-		if got.Opens != e.expect.Opens {
+		if !got.Opens.Equal(e.expect.Opens) {
 			t.Errorf("TestCalculateSchedule(%q) opens:: got: %s; want: %s", e.windowName, got.Opens, e.expect.Opens)
 		}
-		if got.Closes != e.expect.Closes {
+		if !got.Closes.Equal(e.expect.Closes) {
 			t.Errorf("TestCalculateSchedule(%q) closes:: got: %s; want: %s", e.windowName, got.Closes, e.expect.Closes)
 		}
 	}
@@ -613,7 +613,7 @@ func TestWindowActivation(t *testing.T) {
 
 		w := Window{Format: 1, Cron: cr}
 		last := w.LastActivation(a.time)
-		if last != a.last {
+		if !last.Equal(a.last) {
 			t.Errorf("TestActivation(%q) last activation: got: %s; want: %s", a.desc, last, a.last)
 		}
 
@@ -622,7 +622,7 @@ func TestWindowActivation(t *testing.T) {
 			t.Errorf("TestActivation(%q) next activation search timeout exceeded.", a.desc)
 		}
 
-		if next != a.next {
+		if !next.Equal(a.next) {
 			t.Errorf("TestActivation(%q) next activation: got: %s; want: %s", a.desc, next, a.next)
 		}
 	}
@@ -726,10 +726,10 @@ func TestScheduleCombine(t *testing.T) {
 		if err != nil && e.overlaps {
 			t.Errorf("TestScheduleCombine(%q) error: %v", e.desc, err)
 		}
-		if e.base.Opens != e.combined.Opens {
+		if !e.base.Opens.Equal(e.combined.Opens) {
 			t.Errorf("TestScheduleCombine(%q) incorrect opening time. got: %s; want: %s", e.desc, e.base.Opens, e.combined.Opens)
 		}
-		if e.base.Closes != e.combined.Closes {
+		if !e.base.Closes.Equal(e.combined.Closes) {
 			t.Errorf("TestScheduleCombine(%q) incorrect closing time. got: %s; want: %s", e.desc, e.base.Closes, e.combined.Closes)
 		}
 		dur := e.combined.Closes.Sub(e.combined.Opens)

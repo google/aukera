@@ -323,7 +323,7 @@ func (w *Window) NextActivation(ts time.Time) time.Time {
 	// Activation time search timeout
 	for time.Since(start) < (5 * time.Second) {
 		b := w.Cron.Next(a.Add(-2 * time.Second))
-		if a == b {
+		if a.Equal(b) {
 			return b
 		}
 		a = b
@@ -345,7 +345,7 @@ func (w *Window) LastActivation(date time.Time) time.Time {
 	// catch schedules of all frequencies. Omitting the first number in
 	// sequence (0) as it provides no value, only computational cost.
 	fibCurrent, fibLast := 1, 1
-	for next == last {
+	for next.Equal(last) {
 		fibCurrent, fibLast = fibLast, fibCurrent+fibLast
 		last = w.NextActivation(date.Add(-time.Duration(fibCurrent) * time.Minute))
 	}
@@ -421,7 +421,7 @@ func (s *Schedule) Overlaps(c Schedule) bool {
 		return true
 	}
 	// s and c match
-	if c.Opens == s.Opens && c.Closes == s.Closes {
+	if c.Opens.Equal(s.Opens) && c.Closes.Equal(s.Closes) {
 		return true
 	}
 	return false
