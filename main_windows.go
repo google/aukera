@@ -32,7 +32,7 @@ import (
 type winSvc struct{}
 
 func setup() error {
-	evt, err := eventlog.Init("aukera")
+	evt, err := eventlog.InitWithDefaultInstall("aukera")
 	if err != nil {
 		return err
 	}
