@@ -12,13 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build windows
 // +build windows
 
 package auklib
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"time"
+
+	"golang.org/x/sys/windows/registry"
 )
 
 var (
@@ -33,4 +38,45 @@ var (
 	MetricRoot = `/aukera/metrics`
 	// MetricSvc sets platform source for metrics.
 	MetricSvc = "aukera"
+
+	activeHoursStart, activeHoursEnd uint64
+	activeStartTime, activeEndTime   time.Time
 )
+
+const (
+	activeHoursPath = `SOFTWARE\Microsoft\WindowsUpdate\UX\Settings\`
+)
+
+// ActiveHours retrieves the user/auto-set active hours times from the registry.
+// Returns the start and end times of the active hours window, respectively.
+func ActiveHours() (time.Time, time.Time, error) {
+
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, activeHoursPath, registry.READ)
+	if err != nil {
+		return activeStartTime, activeEndTime, err
+	}
+	defer k.Close()
+
+	activeHoursStart, _, err = k.GetIntegerValue("ActiveHoursStart")
+	if err != nil {
+		return activeStartTime, activeEndTime, fmt.Errorf("unable to get active hours start time: %v", err)
+	}
+
+	now := time.Now()
+	activeStartTime = time.Date(now.Year(), now.Month(), now.Day(), int(activeHoursStart), 0, 0, 0, now.Location())
+
+	activeHoursEnd, _, err = k.GetIntegerValue("ActiveHoursEnd")
+	if err != nil {
+		return activeStartTime, activeEndTime, fmt.Errorf("unable to get active hours end time: %v", err)
+	}
+
+	var day int
+	if int(activeHoursEnd) < activeStartTime.Hour() {
+		day = now.Day() + 1
+	} else {
+		day = now.Day()
+	}
+	activeEndTime = time.Date(now.Year(), now.Month(), day, int(activeHoursEnd), 0, 0, 0, now.Location())
+
+	return activeStartTime, activeEndTime, nil
+}

@@ -12,9 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build linux
 // +build linux
 
 package auklib
+
+import (
+	"fmt"
+	"runtime"
+	"time"
+)
 
 var (
 	// DataDir defines app data filesystem location.
@@ -29,3 +36,10 @@ var (
 	// MetricRoot sets metric path for all aukera metrics
 	MetricRoot = `/aukera/metrics`
 )
+
+// ActiveHours retrieves the user/auto-set active hours times.
+// Stubbed out on linux.
+func ActiveHours() (time.Time, time.Time, error) {
+	var t time.Time
+	return t, t, fmt.Errorf("ActiveHours: unsupported operating system: %s", runtime.GOOS)
+}

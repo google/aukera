@@ -17,6 +17,7 @@ package schedule
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 
@@ -65,6 +66,13 @@ func Schedule(names ...string) ([]window.Schedule, error) {
 	m, err := window.Windows(auklib.ConfDir, r)
 	if err != nil {
 		return nil, err
+	}
+	switch runtime.GOOS {
+	case "windows":
+		m, err = window.ActiveHoursWindow(m)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if len(names) == 0 {
 		names = m.Keys()

@@ -17,6 +17,12 @@
 
 package auklib
 
+import (
+	"fmt"
+	"runtime"
+	"time"
+)
+
 var (
 	// DataDir defines app data filesystem location.
 	DataDir = "/var/lib/aukera"
@@ -30,3 +36,10 @@ var (
 	// MetricSvc sets platform source for metrics.
 	MetricSvc = "darwin"
 )
+
+// ActiveHours retrieves the user/auto-set active hours times.
+// Stubbed out on darwin.
+func ActiveHours() (time.Time, time.Time, error) {
+	var t time.Time
+	return t, t, fmt.Errorf("ActiveHours: unsupported operating system: %s", runtime.GOOS)
+}
