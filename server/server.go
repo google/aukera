@@ -53,6 +53,18 @@ func serve(w http.ResponseWriter, r *http.Request) {
 	sendHTTPResponse(w, http.StatusOK, b)
 }
 
+func serveActiveHours(w http.ResponseWriter, r *http.Request) {
+	s, err := schedule.ActiveHours()
+	if err != nil {
+		sendHTTPResponse(w, http.StatusInternalServerError, []byte(err.Error()))
+	}
+	b, err := json.Marshal(&s)
+	if err != nil {
+		sendHTTPResponse(w, http.StatusInternalServerError, []byte(err.Error()))
+	}
+	sendHTTPResponse(w, http.StatusOK, b)
+}
+
 func respondOk(w http.ResponseWriter, r *http.Request) {
 	sendHTTPResponse(w, http.StatusOK, []byte("OK"))
 }
@@ -62,6 +74,7 @@ func muxRouter() http.Handler {
 	rtr.HandleFunc("/status", respondOk)
 	rtr.HandleFunc("/schedule", serve)
 	rtr.HandleFunc("/schedule/{label}", serve)
+	rtr.HandleFunc("/active_hours", serveActiveHours)
 	return rtr
 }
 

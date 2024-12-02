@@ -579,7 +579,7 @@ func reportConfFileMetric(path, result string) {
 }
 
 // ActiveHoursWindow retrieves the built-in Active Hours maintenance windows if available.
-func ActiveHoursWindow(m Map) (Map, error) {
+func ActiveHoursWindow() (*Window, error) {
 	activeStartTime, activeEndTime, err := auklib.ActiveHours()
 	if err != nil {
 		return nil, err
@@ -602,6 +602,5 @@ func ActiveHoursWindow(m Map) (Map, error) {
 	} else {
 		activeWindow.Schedule.State = "closed"
 	}
-	m.Add(activeWindow)
-	return m, nil
+	return &activeWindow, nil
 }
