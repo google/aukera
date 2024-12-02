@@ -60,6 +60,35 @@ func Label(port int, names ...string) ([]window.Schedule, error) {
 	return readSchedules(urls)
 }
 
+// ActiveHours gets the built-in Active Hours maintenance window.
+// This window is active (open) during the times set by the user or machine admin as the hours
+// during which user activity is expected.
+func ActiveHours(port int) (*window.Window, error) {
+	if !Test(fmt.Sprintf("%s:%d", urlBase, port)) {
+		return nil, fmt.Errorf("service not available")
+	}
+	url := fmt.Sprintf("%s:%d/active_hours", urlBase, port)
+	var win *window.Window
+	response, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return win, fmt.Errorf(
+			"active_hours request failed for url %s (%d)", url, response.StatusCode)
+	}
+	j, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(j, win); err != nil {
+		return nil, err
+	}
+	return win, nil
+}
+
 func readSchedules(urls []string) ([]window.Schedule, error) {
 	var sched []window.Schedule
 	for _, url := range urls {

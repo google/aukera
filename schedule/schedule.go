@@ -17,7 +17,6 @@ package schedule
 
 import (
 	"fmt"
-	"runtime"
 	"strings"
 	"time"
 
@@ -60,19 +59,17 @@ func findNearest(schedules []window.Schedule) window.Schedule {
 	return next
 }
 
+// ActiveHours returns the built-in Active Hours maintenance window.
+func ActiveHours() (*window.Window, error) {
+	return window.ActiveHoursWindow()
+}
+
 // Schedule calculates schedule per label and returns label whose names match the given string(s).
 func Schedule(names ...string) ([]window.Schedule, error) {
 	var r window.Reader
 	m, err := window.Windows(auklib.ConfDir, r)
 	if err != nil {
 		return nil, err
-	}
-	switch runtime.GOOS {
-	case "windows":
-		m, err = window.ActiveHoursWindow(m)
-		if err != nil {
-			return nil, err
-		}
 	}
 	if len(names) == 0 {
 		names = m.Keys()
