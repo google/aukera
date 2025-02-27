@@ -582,7 +582,7 @@ func reportConfFileMetric(path, result string) {
 func ActiveHoursWindow(m Map) (Map, error) {
 	activeStartTime, activeEndTime, err := auklib.ActiveHours()
 	if err != nil {
-		return nil, err
+		return m, err
 	}
 	activeWindow := Window{
 		Name:     "active_hours",

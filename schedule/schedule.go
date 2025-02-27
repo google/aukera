@@ -71,7 +71,7 @@ func Schedule(names ...string) ([]window.Schedule, error) {
 	case "windows":
 		m, err = window.ActiveHoursWindow(m)
 		if err != nil {
-			return nil, err
+			deck.Errorf("ActiveHoursWindow() creation failed, skipping: %v", err)
 		}
 	}
 	if len(names) == 0 {
