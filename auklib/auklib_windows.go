@@ -51,23 +51,39 @@ const (
 // Returns the start and end times of the active hours window, respectively.
 func ActiveHours() (time.Time, time.Time, error) {
 
-	k, err := registry.OpenKey(registry.LOCAL_MACHINE, activeHoursPath, registry.READ)
+	k, err := registry.OpenKey(registry.LOCAL_MACHINE, activeHoursPath, registry.ALL_ACCESS)
 	if err != nil {
 		return activeStartTime, activeEndTime, err
 	}
 	defer k.Close()
 
 	activeHoursStart, _, err = k.GetIntegerValue("ActiveHoursStart")
-	if err != nil {
+	if err != nil && err != registry.ErrNotExist {
 		return activeStartTime, activeEndTime, fmt.Errorf("unable to get active hours start time: %v", err)
+	}
+
+	if err == registry.ErrNotExist {
+		// If the ActiveHoursStart value does not exist, set it to the Microsoft default of 8:00 AM.
+		if err := k.SetDWordValue("ActiveHoursStart", 8); err != nil {
+			return activeStartTime, activeEndTime, fmt.Errorf("ActiveHoursStart not found and unable to set default active hours start time: %v", err)
+		}
+		activeHoursStart = 8
 	}
 
 	now := time.Now()
 	activeStartTime = time.Date(now.Year(), now.Month(), now.Day(), int(activeHoursStart), 0, 0, 0, now.Location())
 
 	activeHoursEnd, _, err = k.GetIntegerValue("ActiveHoursEnd")
-	if err != nil {
+	if err != nil && err != registry.ErrNotExist {
 		return activeStartTime, activeEndTime, fmt.Errorf("unable to get active hours end time: %v", err)
+	}
+
+	if err != nil && err == registry.ErrNotExist {
+		// If the ActiveHoursEnd value does not exist, set it to the Microsoft default of 5:00 PM.
+		if err := k.SetDWordValue("ActiveHoursEnd", 17); err != nil {
+			return activeStartTime, activeEndTime, fmt.Errorf("ActiveHoursEnd not found and unable to set default active hours end time: %v", err)
+		}
+		activeHoursEnd = 17
 	}
 
 	var day int
