@@ -1,9 +1,9 @@
 module github.com/google/aukera
 
-go 1.21
+go 1.22
 
 require (
-	github.com/go-chi/chi/v5 v5.2.2
+	github.com/go-chi/chi/v5 v5.2.4
 	github.com/google/cabbie v1.0.5
 	github.com/google/deck v1.1.0
 	github.com/google/go-cmp v0.7.0

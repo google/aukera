@@ -1,5 +1,5 @@
-github.com/go-chi/chi/v5 v5.2.2 h1:CMwsvRVTbXVytCk1Wd72Zy1LAsAh9GxMmSNWLHCG618=
-github.com/go-chi/chi/v5 v5.2.2/go.mod h1:L2yAIGWB3H+phAw1NxKwWM+7eUH/lU8pOMm5hHcoops=
+github.com/go-chi/chi/v5 v5.2.4 h1:WtFKPHwlywe8Srng8j2BhOD9312j9cGUxG1SP4V2cR4=
+github.com/go-chi/chi/v5 v5.2.4/go.mod h1:X7Gx4mteadT3eDOMTsXzmI4/rwUpOwBHLpAfupzFJP0=
 github.com/google/cabbie v1.0.5 h1:j+JWBiMpzJCTkVLKrzsNBQLkRff55sjzXc0AQOTV2JU=
 github.com/google/cabbie v1.0.5/go.mod h1:WytqVAbQee3vvDZQSROF6ZsPGrUsmpot9tKNtxnr/lk=
 github.com/google/deck v1.1.0 h1:kePIz/wtlpsFSx3+sEmYnlBPudF0x3u0QqB91EC8l38=
