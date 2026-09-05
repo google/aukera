@@ -26,6 +26,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	_ "time/tzdata"
 
 	"github.com/google/deck/backends/logger"
 	"github.com/google/deck"
@@ -824,5 +825,345 @@ func TestScheduleMarshal(t *testing.T) {
 	}
 	if !cmp.Equal(b, test.want) {
 		t.Errorf("TestScheduleMarshal(%q): unexpected JSON returned: got: %s; want: %s", test.desc, string(b), string(test.want))
+	}
+}
+
+func TestNthWeekdaySchedule(t *testing.T) {
+	locNY, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		t.Fatalf("LoadLocation failed: %v", err)
+	}
+
+	apr1NY := time.Date(2025, time.April, 1, 0, 0, 0, 0, locNY)
+	tue3rdNY := time.Date(2025, time.April, 15, 17, 0, 0, 0, locNY)
+	tue3rdMarNY := time.Date(2025, time.March, 18, 17, 0, 0, 0, locNY)
+
+	apr1Local := time.Date(2025, time.April, 1, 0, 0, 0, 0, time.Local)
+	tue3rdLocal := time.Date(2025, time.April, 15, 17, 0, 0, 0, time.Local)
+	tue3rdMarLocal := time.Date(2025, time.March, 18, 17, 0, 0, 0, time.Local)
+
+	apr1UTC := time.Date(2025, time.April, 1, 0, 0, 0, 0, time.UTC)
+	tue3rdUTC := time.Date(2025, time.April, 15, 17, 0, 0, 0, time.UTC)
+	tue3rdMarUTC := time.Date(2025, time.March, 18, 17, 0, 0, 0, time.UTC)
+
+	validTests := []struct {
+		desc               string
+		spec               string
+		from               time.Time
+		wantNext, wantLast time.Time
+	}{
+		{"3rd Tue TZ=America/New_York (5 fields)", "TZ=America/New_York 0 17 * * Tue#3", apr1NY, tue3rdNY, tue3rdMarNY},
+		{"3rd Tue TZ=America/New_York (6 fields)", "TZ=America/New_York 0 0 17 * * Tue#3", apr1NY, tue3rdNY, tue3rdMarNY},
+		{"3rd Tue CRON_TZ=America/New_York (5 fields)", "CRON_TZ=America/New_York 0 17 * * Tue#3", apr1NY, tue3rdNY, tue3rdMarNY},
+		{"3rd Tue CRON_TZ=America/New_York (6 fields)", "CRON_TZ=America/New_York 0 0 17 * * Tue#3", apr1NY, tue3rdNY, tue3rdMarNY},
+		{"3rd Tue Tue#3 (6 fields)", "0 0 17 * * Tue#3", apr1Local, tue3rdLocal, tue3rdMarLocal},
+		{"3rd Tue numeric 2#3", "0 0 17 * * 2#3", apr1Local, tue3rdLocal, tue3rdMarLocal},
+		{"3rd Tue 5-field cron", "0 17 * * Tue#3", apr1Local, tue3rdLocal, tue3rdMarLocal},
+		{"3rd Tue after occurrence passed", "0 0 17 * * Tue#3", time.Date(2025, time.April, 16, 0, 0, 0, 0, time.Local), time.Date(2025, time.May, 20, 17, 0, 0, 0, time.Local), tue3rdLocal},
+		{"Last Tue Tue#L", "0 0 17 * * Tue#L", apr1Local, time.Date(2025, time.April, 29, 17, 0, 0, 0, time.Local), time.Date(2025, time.March, 25, 17, 0, 0, 0, time.Local)},
+		{"1st Mon Mon#1", "0 0 9 * * Mon#1", apr1Local, time.Date(2025, time.April, 7, 9, 0, 0, 0, time.Local), time.Date(2025, time.March, 3, 9, 0, 0, 0, time.Local)},
+		{"3rd Tue CRON_TZ=UTC", "CRON_TZ=UTC 0 0 17 * * Tue#3", apr1UTC, tue3rdUTC, tue3rdMarUTC},
+		{"3rd Tue CRON_TZ=UTC 5-field", "CRON_TZ=UTC 0 17 * * Tue#3", apr1UTC, tue3rdUTC, tue3rdMarUTC},
+		{"Last Tue Tue#LAST", "0 0 17 * * Tue#LAST", apr1Local, time.Date(2025, time.April, 29, 17, 0, 0, 0, time.Local), time.Date(2025, time.March, 25, 17, 0, 0, 0, time.Local)},
+		{"5th Tue month with 4 skips", "0 0 17 * * Tue#5", time.Date(2025, time.May, 1, 0, 0, 0, 0, time.Local), time.Date(2025, time.July, 29, 17, 0, 0, 0, time.Local), time.Date(2025, time.April, 29, 17, 0, 0, 0, time.Local)},
+		{"1st Sun 0#1", "0 0 10 * * 0#1", apr1Local, time.Date(2025, time.April, 6, 10, 0, 0, 0, time.Local), time.Date(2025, time.March, 2, 10, 0, 0, 0, time.Local)},
+		{"1st Sun 7#1", "0 0 10 * * 7#1", apr1Local, time.Date(2025, time.April, 6, 10, 0, 0, 0, time.Local), time.Date(2025, time.March, 2, 10, 0, 0, 0, time.Local)},
+		{"3rd Tue whitespace CRON_TZ=UTC", "   CRON_TZ=UTC 0 0 17 * * Tue#3   ", apr1UTC, tue3rdUTC, tue3rdMarUTC},
+		{"3rd Tue whitespace 5-field CRON_TZ=UTC", "   CRON_TZ=UTC 0 17 * * Tue#3   ", apr1UTC, tue3rdUTC, tue3rdMarUTC},
+		{"3rd Tue whitespace without TZ", "   0 0 17 * * Tue#3   ", apr1Local, tue3rdLocal, tue3rdMarLocal},
+		{"3rd Tue whitespace 5-field without TZ", "   0 17 * * Tue#3   ", apr1Local, tue3rdLocal, tue3rdMarLocal},
+	}
+	for _, tc := range validTests {
+		t.Run(tc.desc, func(t *testing.T) {
+			sched, err := parseSchedule(tc.spec)
+			if err != nil {
+				t.Fatalf("parseSchedule(%q): unexpected error: %v", tc.spec, err)
+			}
+			w := Window{Format: FormatCron, Cron: sched, CronString: tc.spec}
+			if got := w.NextActivation(tc.from); !got.Equal(tc.wantNext) {
+				t.Errorf("NextActivation(%q): got %s, want %s", tc.spec, got, tc.wantNext)
+			}
+			if got := w.LastActivation(tc.from); !got.Equal(tc.wantLast) {
+				t.Errorf("LastActivation(%q): got %s, want %s", tc.spec, got, tc.wantLast)
+			}
+		})
+	}
+
+	errorTests := []struct {
+		desc, spec, wantErrSubstr string
+	}{
+		{"invalid occurrence #0", "0 0 17 * * Tue#0", "must be 1-5 or L"},
+		{"invalid occurrence #6", "0 0 17 * * Tue#6", "must be 1-5 or L"},
+		{"invalid weekday name", "0 0 17 * * Foo#3", "unknown weekday"},
+		{"invalid weekday number 8", "0 0 17 * * 8#1", "unknown weekday"},
+		{"hash in day-of-month field", "0 0 17 *#3 * Tue", "found in other field"},
+		{"hash in minute field 6-field cron", "0 17#3 0 * * Tue", "found in other field"},
+		{"hash in hour field 6-field cron", "0 0 17#3 * * Tue", "found in other field"},
+		{"hash in month field 6-field cron", "0 0 17 * 4#3 Tue", "found in other field"},
+		{"missing occurrence after hash", "0 0 17 * * Tue#", "must be 1-5 or L"},
+		{"missing weekday before hash", "0 0 17 * * #3", "unknown weekday"},
+		{"multiple hashes", "0 0 17 * * Tue#3#1", "invalid '#' syntax"},
+		{"non-numeric occurrence", "0 0 17 * * Tue#foo", "must be 1-5 or L"},
+		{"wrong field count with hash", "0 0 0 17 * * Tue#3", "expected 6 fields"},
+		{"invalid base schedule hour", "0 0 99 * * Tue#3", "error parsing base schedule"},
+		{"hash in day-of-month field 5-field cron", "17 *#3 * * Tue", "found in other field"},
+		{"hash in minute field 5-field cron", "17#3 0 * * Tue", "found in other field"},
+		{"hash in hour field 5-field cron", "0 17#3 * * Tue", "found in other field"},
+		{"hash in month field 5-field cron", "0 17 * 4#3 Tue", "found in other field"},
+		{"hash in month field with TZ 5-field cron", "TZ=America/New_York 0 17 * 4#3 Tue", "found in other field"},
+		{"hash in month field with TZ 6-field cron", "TZ=America/New_York 0 0 17 * 4#3 Tue", "found in other field"},
+		{"4 fields with hash", "17 * * Tue#3", "expected 6 fields"},
+		{"only TZ with hash and no fields", "CRON_TZ=UTC#1", "expected 6 fields"},
+		{"only TZ prefix with hash and no fields", "TZ=UTC#1", "expected 6 fields"},
+	}
+	for _, tc := range errorTests {
+		t.Run(tc.desc, func(t *testing.T) {
+			_, err := parseSchedule(tc.spec)
+			if err == nil {
+				t.Fatalf("parseSchedule(%q): expected error, got nil", tc.spec)
+			}
+			if !strings.Contains(err.Error(), tc.wantErrSubstr) {
+				t.Errorf("parseSchedule(%q): error %q does not contain expected substring %q", tc.spec, err, tc.wantErrSubstr)
+			}
+		})
+	}
+}
+
+func TestNthWeekdayWindowJSONAndUnique(t *testing.T) {
+	rawJSON := []byte(`{"Windows": [
+		{"Name": "patching-window", "Format": 1, "Schedule": "0 0 17 * * Tue#3", "Duration": "3h", "Labels": ["patching", "reboot"]},
+		{"Name": "patching-window", "Format": 1, "Schedule": "0 0 17 * * Tue#3", "Duration": "3h", "Labels": ["patching", "reboot"]}
+	]}`)
+
+	var s struct{ Windows []Window }
+	if err := json.Unmarshal(rawJSON, &s); err != nil {
+		t.Fatalf("json.Unmarshal failed: %v", err)
+	}
+	if len(s.Windows) != 2 {
+		t.Fatalf("expected 2 windows, got %d", len(s.Windows))
+	}
+
+	m := make(Map)
+	m.Add(s.Windows...)
+	unique := m.UniqueWindows()
+	if len(unique) != 1 {
+		t.Errorf("UniqueWindows(): expected 1 unique window, got %d", len(unique))
+	}
+	if diff := cmp.Diff(unique[0], s.Windows[0], cmpopts.IgnoreFields(cron.SpecSchedule{}, "Location")); diff != "" {
+		t.Errorf("UniqueWindows(): unexpected difference (-got +want):\n%s", diff)
+	}
+
+	mBytes, err := json.Marshal(m)
+	if err != nil {
+		t.Fatalf("json.Marshal(m) failed: %v", err)
+	}
+	var remarshaled struct{ Windows []Window }
+	if err := json.Unmarshal(mBytes, &remarshaled); err != nil {
+		t.Fatalf("json.Unmarshal(mBytes) failed: %v", err)
+	}
+	if len(remarshaled.Windows) != 1 {
+		t.Errorf("expected 1 window after re-marshaling Map, got %d", len(remarshaled.Windows))
+	} else if diff := cmp.Diff(remarshaled.Windows[0], unique[0], cmpopts.IgnoreFields(cron.SpecSchedule{}, "Location")); diff != "" {
+		t.Errorf("remarshaled window diff (-got +want):\n%s", diff)
+	}
+
+	var distinct Window
+	if err := json.Unmarshal([]byte(`{"Name": "maintenance-window", "Format": 1, "Schedule": "0 0 18 * * Wed#1", "Duration": "2h", "Labels": ["maintenance"]}`), &distinct); err != nil {
+		t.Fatalf("json.Unmarshal(distinct) failed: %v", err)
+	}
+	m.Add(distinct)
+	if got := len(m.UniqueWindows()); got != 2 {
+		t.Errorf("UniqueWindows() with distinct window: expected 2 unique windows, got %d", got)
+	}
+}
+
+func TestNthWeekdaySchedule_Matches(t *testing.T) {
+	sched1stMon := &NthWeekdaySchedule{Weekday: time.Monday, Occurrence: 1}
+	sched3rdTue := &NthWeekdaySchedule{Weekday: time.Tuesday, Occurrence: 3}
+	schedLastTue := &NthWeekdaySchedule{Weekday: time.Tuesday, Last: true}
+
+	tests := []struct {
+		desc  string
+		sched *NthWeekdaySchedule
+		date  time.Time
+		want  bool
+	}{
+		{"weekday mismatch", sched3rdTue, time.Date(2025, time.April, 16, 12, 0, 0, 0, time.UTC), false},
+		{"occurrence mismatch", sched3rdTue, time.Date(2025, time.April, 1, 12, 0, 0, 0, time.UTC), false},
+		{"occurrence mismatch 2nd tue", sched3rdTue, time.Date(2025, time.April, 8, 12, 0, 0, 0, time.UTC), false},
+		{"occurrence match", sched3rdTue, time.Date(2025, time.April, 15, 12, 0, 0, 0, time.UTC), true},
+		{"occurrence mismatch 4th tue", sched3rdTue, time.Date(2025, time.April, 22, 12, 0, 0, 0, time.UTC), false},
+		{"1st occurrence boundary day 7", sched1stMon, time.Date(2025, time.April, 7, 12, 0, 0, 0, time.UTC), true},
+		{"1st occurrence mismatch day 14", sched1stMon, time.Date(2025, time.April, 14, 12, 0, 0, 0, time.UTC), false},
+		{"last weekday mismatch", schedLastTue, time.Date(2025, time.April, 28, 12, 0, 0, 0, time.UTC), false},
+		{"last not last occurrence", schedLastTue, time.Date(2025, time.April, 22, 12, 0, 0, 0, time.UTC), false},
+		{"last occurrence match", schedLastTue, time.Date(2025, time.April, 29, 12, 0, 0, 0, time.UTC), true},
+		{"last occurrence Dec year boundary", schedLastTue, time.Date(2025, time.December, 30, 12, 0, 0, 0, time.UTC), true},
+		{"last occurrence Dec not last", schedLastTue, time.Date(2025, time.December, 23, 12, 0, 0, 0, time.UTC), false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			if got := tc.sched.matches(tc.date); got != tc.want {
+				t.Errorf("matches(%v): got %v, want %v", tc.date, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestNthWeekdaySchedule_NextWithDailyBase(t *testing.T) {
+	base, err := cronParser.Parse("0 0 12 * * *")
+	if err != nil {
+		t.Fatalf("cronParser.Parse failed: %v", err)
+	}
+	sched := &NthWeekdaySchedule{Base: base, Weekday: time.Tuesday, Occurrence: 2}
+	from := time.Date(2025, time.April, 1, 0, 0, 0, 0, time.Local)
+	want := time.Date(2025, time.April, 8, 12, 0, 0, 0, time.Local)
+	if got := sched.Next(from); !got.Equal(want) {
+		t.Errorf("sched.Next(%v) with daily base: got %v, want %v", from, got, want)
+	}
+	// Verify rollover to next month when starting after occurrence.
+	fromAfter := time.Date(2025, time.April, 9, 0, 0, 0, 0, time.Local)
+	wantMay := time.Date(2025, time.May, 13, 12, 0, 0, 0, time.Local)
+	if got := sched.Next(fromAfter); !got.Equal(wantMay) {
+		t.Errorf("sched.Next(%v) with daily base after occurrence: got %v, want %v", fromAfter, got, wantMay)
+	}
+}
+
+type mockSchedule struct {
+	nextFunc func(time.Time) time.Time
+}
+
+func (m *mockSchedule) Next(t time.Time) time.Time {
+	return m.nextFunc(t)
+}
+
+func TestNthWeekdaySchedule_NextYearLimit(t *testing.T) {
+	from := time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC)
+	targetYear5 := time.Date(2030, time.January, 1, 12, 0, 0, 0, time.UTC) // Jan 1 2030 is 1st Tue (t.Year()+5)
+	targetYear6 := time.Date(2031, time.January, 7, 12, 0, 0, 0, time.UTC) // Jan 7 2031 is 1st Tue (t.Year()+6)
+
+	targetMock := func(target time.Time) cron.Schedule {
+		return &mockSchedule{nextFunc: func(t time.Time) time.Time {
+			if t.Before(target) {
+				return target
+			}
+			return time.Time{}
+		}}
+	}
+
+	tests := []struct {
+		desc string
+		base cron.Schedule
+		want time.Time
+	}{
+		{"zero base returns zero", &mockSchedule{nextFunc: func(time.Time) time.Time { return time.Time{} }}, time.Time{}},
+		{"within year limit (t.Year()+5)", targetMock(targetYear5), targetYear5},
+		{"exceeds year limit (t.Year()+6)", targetMock(targetYear6), time.Time{}},
+		{"no match loop exceeding limit", &mockSchedule{nextFunc: func(t time.Time) time.Time {
+			next := t.AddDate(1, 0, 0)
+			for next.Weekday() != time.Wednesday {
+				next = next.AddDate(0, 0, 1)
+			}
+			return next
+		}}, time.Time{}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			sched := &NthWeekdaySchedule{Base: tc.base, Weekday: time.Tuesday, Occurrence: 1}
+			got := sched.Next(from)
+			if tc.want.IsZero() {
+				if !got.IsZero() {
+					t.Errorf("Next(): got %v, want zero time", got)
+				}
+			} else if !got.Equal(tc.want) {
+				t.Errorf("Next(): got %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestNthWeekdaySchedule_Equal(t *testing.T) {
+	base1, err := cronParser.Parse("0 0 17 * * tue")
+	if err != nil {
+		t.Fatalf("cronParser.Parse failed: %v", err)
+	}
+	base2, err := cronParser.Parse("0 0 18 * * wed")
+	if err != nil {
+		t.Fatalf("cronParser.Parse failed: %v", err)
+	}
+
+	s := &NthWeekdaySchedule{Base: base1, Weekday: time.Tuesday, Occurrence: 3}
+	sLast := &NthWeekdaySchedule{Base: base1, Weekday: time.Tuesday, Last: true}
+
+	tests := []struct {
+		desc string
+		a, b *NthWeekdaySchedule
+		want bool
+	}{
+		{"nil == nil", nil, nil, true},
+		{"s != nil", s, nil, false},
+		{"nil != s", nil, s, false},
+		{"identical", s, &NthWeekdaySchedule{Base: base1, Weekday: time.Tuesday, Occurrence: 3}, true},
+		{"identical Last", sLast, &NthWeekdaySchedule{Base: base1, Weekday: time.Tuesday, Last: true}, true},
+		{"diff Weekday", s, &NthWeekdaySchedule{Base: base1, Weekday: time.Wednesday, Occurrence: 3}, false},
+		{"diff Occurrence", s, &NthWeekdaySchedule{Base: base1, Weekday: time.Tuesday, Occurrence: 4}, false},
+		{"diff Last", s, &NthWeekdaySchedule{Base: base1, Weekday: time.Tuesday, Occurrence: 3, Last: true}, false},
+		{"diff Base", s, &NthWeekdaySchedule{Base: base2, Weekday: time.Tuesday, Occurrence: 3}, false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			if got := tc.a.Equal(tc.b); got != tc.want {
+				t.Errorf("a.Equal(b): got %v, want %v", got, tc.want)
+			}
+			if got := tc.b.Equal(tc.a); got != tc.want {
+				t.Errorf("b.Equal(a): got %v, want %v", got, tc.want)
+			}
+			if got := cmp.Equal(tc.a, tc.b); got != tc.want {
+				t.Errorf("cmp.Equal(a, b): got %v, want %v", got, tc.want)
+			}
+			if got := cmp.Equal(tc.b, tc.a); got != tc.want {
+				t.Errorf("cmp.Equal(b, a): got %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestParseSchedule_TrimSpace(t *testing.T) {
+	specs := []struct {
+		desc     string
+		spec     string
+		wantDOW  time.Weekday
+		wantOcc  int
+		wantLast bool
+		isNth    bool
+	}{
+		{"6-field hash schedule with leading/trailing whitespace and CRON_TZ", "   CRON_TZ=UTC 0 0 17 * * Tue#3   ", time.Tuesday, 3, false, true},
+		{"5-field hash schedule with leading/trailing whitespace and CRON_TZ", "   CRON_TZ=UTC 0 17 * * Tue#3   ", time.Tuesday, 3, false, true},
+		{"6-field hash schedule with leading/trailing whitespace and TZ", "   TZ=America/New_York 0 0 17 * * Wed#1   ", time.Wednesday, 1, false, true},
+		{"6-field hash schedule with leading/trailing whitespace and TZ=UTC", "   TZ=UTC 0 0 17 * * Wed#1   ", time.Wednesday, 1, false, true},
+		{"6-field hash schedule with leading/trailing whitespace without TZ", "   0 0 17 * * Fri#L   ", time.Friday, 0, true, true},
+		{"standard cron with leading/trailing whitespace and CRON_TZ", "   CRON_TZ=UTC 0 0 17 * * *   ", 0, 0, false, false},
+		{"standard cron with leading/trailing whitespace without TZ", "   0 0 17 * * *   ", 0, 0, false, false},
+	}
+
+	for _, tc := range specs {
+		t.Run(tc.desc, func(t *testing.T) {
+			sched, err := parseSchedule(tc.spec)
+			if err != nil {
+				t.Fatalf("parseSchedule(%q) unexpected error: %v", tc.spec, err)
+			}
+			if tc.isNth {
+				nth, ok := sched.(*NthWeekdaySchedule)
+				if !ok {
+					t.Fatalf("parseSchedule(%q) returned %T, want *NthWeekdaySchedule", tc.spec, sched)
+				}
+				if nth.Weekday != tc.wantDOW || nth.Occurrence != tc.wantOcc || nth.Last != tc.wantLast {
+					t.Errorf("parseSchedule(%q): got (%v, %d, %v), want (%v, %d, %v)", tc.spec, nth.Weekday, nth.Occurrence, nth.Last, tc.wantDOW, tc.wantOcc, tc.wantLast)
+				}
+			}
+			if next := sched.Next(time.Date(2025, time.April, 1, 0, 0, 0, 0, time.UTC)); next.IsZero() {
+				t.Errorf("parseSchedule(%q) Next returned zero time", tc.spec)
+			}
+		})
 	}
 }

@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -42,6 +43,145 @@ const (
 )
 
 var cronParser = cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.DowOptional | cron.Descriptor)
+
+// NthWeekdaySchedule wraps a cron.Schedule to only match on the nth occurrence
+// (or last occurrence) of a specific weekday in a month (e.g. 3rd Tuesday).
+type NthWeekdaySchedule struct {
+	Base       cron.Schedule
+	Weekday    time.Weekday
+	Occurrence int  // 1 to 5, or 0 if Last is true
+	Last       bool // true if matching the last occurrence of the weekday in the month
+}
+
+// Next returns the next activation time that satisfies the nth weekday condition.
+func (s *NthWeekdaySchedule) Next(t time.Time) time.Time {
+	yearLimit := t.Year() + 5
+	for {
+		next := s.Base.Next(t)
+		if next.IsZero() || next.Year() > yearLimit {
+			return time.Time{}
+		}
+		if s.matches(next) {
+			return next
+		}
+		t = next
+	}
+}
+
+func (s *NthWeekdaySchedule) matches(t time.Time) bool {
+	if t.Weekday() != s.Weekday {
+		return false
+	}
+	if s.Last {
+		return t.AddDate(0, 0, 7).Month() != t.Month()
+	}
+	return (t.Day()-1)/7+1 == s.Occurrence
+}
+
+// Equal implements custom equality comparison for cmp.Equal.
+func (s *NthWeekdaySchedule) Equal(other *NthWeekdaySchedule) bool {
+	if s == nil || other == nil {
+		return s == other
+	}
+	return s.Weekday == other.Weekday &&
+		s.Occurrence == other.Occurrence &&
+		s.Last == other.Last &&
+		cmp.Equal(s.Base, other.Base, cmpopts.IgnoreFields(cron.SpecSchedule{}, "Location"))
+}
+
+var weekdayNames = map[string]time.Weekday{
+	"0":         time.Sunday,
+	"7":         time.Sunday,
+	"sun":       time.Sunday,
+	"sunday":    time.Sunday,
+	"1":         time.Monday,
+	"mon":       time.Monday,
+	"monday":    time.Monday,
+	"2":         time.Tuesday,
+	"tue":       time.Tuesday,
+	"tuesday":   time.Tuesday,
+	"3":         time.Wednesday,
+	"wed":       time.Wednesday,
+	"wednesday": time.Wednesday,
+	"4":         time.Thursday,
+	"thu":       time.Thursday,
+	"thursday":  time.Thursday,
+	"5":         time.Friday,
+	"fri":       time.Friday,
+	"friday":    time.Friday,
+	"6":         time.Saturday,
+	"sat":       time.Saturday,
+	"saturday":  time.Saturday,
+}
+
+var standardDOWNames = []string{"sun", "mon", "tue", "wed", "thu", "fri", "sat"}
+
+func parseSchedule(spec string) (cron.Schedule, error) {
+	spec = strings.TrimSpace(spec)
+	if !strings.Contains(spec, "#") {
+		return cronParser.Parse(spec)
+	}
+
+	fields := strings.Fields(spec)
+
+	prefix := ""
+	if strings.HasPrefix(fields[0], "TZ=") || strings.HasPrefix(fields[0], "CRON_TZ=") {
+		prefix = fields[0] + " "
+		fields = fields[1:]
+	}
+
+	// If standard 5 fields (Minute Hour Dom Month Dow), normalize to 6 fields by prepending Second=0
+	if len(fields) == 5 {
+		fields = append([]string{"0"}, fields...)
+	}
+
+	if len(fields) != 6 {
+		return nil, fmt.Errorf("invalid schedule format %q: expected 6 fields for '#' schedule", spec)
+	}
+
+	dowField := fields[5]
+	if !strings.Contains(dowField, "#") {
+		return nil, fmt.Errorf("expected '#' in day-of-week field, found in other field: %q", spec)
+	}
+
+	parts := strings.Split(dowField, "#")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid '#' syntax in %q", dowField)
+	}
+
+	wdStr := strings.ToLower(parts[0])
+	wd, ok := weekdayNames[wdStr]
+	if !ok {
+		return nil, fmt.Errorf("unknown weekday %q in %q", parts[0], dowField)
+	}
+
+	occStr := strings.ToLower(parts[1])
+	isLast := false
+	occ := 0
+	if occStr == "l" || occStr == "last" {
+		isLast = true
+	} else {
+		n, err := strconv.Atoi(occStr)
+		if err != nil || n < 1 || n > 5 {
+			return nil, fmt.Errorf("invalid occurrence %q in %q: must be 1-5 or L", parts[1], dowField)
+		}
+		occ = n
+	}
+
+	fields[5] = standardDOWNames[wd]
+	baseSpec := prefix + strings.Join(fields, " ")
+	baseSched, err := cronParser.Parse(baseSpec)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing base schedule %q: %v", baseSpec, err)
+	}
+
+	return &NthWeekdaySchedule{
+		Base:       baseSched,
+		Weekday:    wd,
+		Occurrence: occ,
+		Last:       isLast,
+	}, nil
+}
 
 // Map correlates windows to their defined labels.
 type Map map[string][]Window
@@ -208,7 +348,7 @@ func (w *Window) UnmarshalJSON(b []byte) error {
 	var err error
 	switch conv.Format {
 	case FormatCron:
-		w.Cron, err = cronParser.Parse(conv.Schedule)
+		w.Cron, err = parseSchedule(conv.Schedule)
 		if err != nil {
 			return fmt.Errorf("window(%s): error processing schedule %q: %v", w.Name, conv.Schedule, err)
 		}
